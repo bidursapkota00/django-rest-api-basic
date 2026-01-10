@@ -6,7 +6,7 @@
 
 ## Table of Contents
 
-1. [Introduction and Installation](#Introduction and Installation)
+1. [Introduction and Installation](#introduction-and-installation)
 
 ## Introduction and Installation
 
@@ -59,7 +59,7 @@
 
 ```bash
 docker --version
-docker-compose --version
+docker compose --version
 git --version
 ```
 
@@ -102,6 +102,13 @@ git --version
 - Select .gitignore template: Python
 - Clone repo locally
 - Open VSCode on cloned folder
+
+**Create requirements.txt**
+
+```text
+Django>=3.2.4,<3.3
+djangorestframework>=3.12.4,<3.13
+```
 
 **Docker Hub**
 
@@ -187,24 +194,155 @@ docker build .
   - Port mappings
   - Volume mappings
 
+**Create docker-compose.yml**
+
+```yml
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+```
+
+**Build Image**
+
+- does same as docker build .
+
+```bash
+docker compose build
+```
+
 **Using Docker Compose**
 
 - Run all commands through Docker Compose
 
 ```bash
-  docker-compose run --rm app sh -c "python manage.py collectstatic"
+  docker compose run --rm app sh -c "python manage.py collectstatic"
 ```
 
-- `docker-compose` runs a Docker Compose command
+- `docker compose` runs a Docker Compose command
 - `run` will start a specific container defined in config
 - `--rm` removes the container
 - `app` is the name of the service
 - `sh -c` passess in a shell command
 - Command to run inside container
 
-**Create requirements.txt**
+**Linting**
+
+- Tools to check code formatting
+- Highlights errors, typos, formatting issues
+- **Install flake8 package**
+- Run it through Docker Compose
+
+```bash
+docker compose run --rm app sh -c "flake8"
+```
+
+**Testing**
+
+- Django test suite
+- Setup tests per Django app
+- Run tests through Docker Compose
+
+```bash
+docker compose run --rm app sh -c "python manage.py test"
+```
+
+**Create file requirements.dev.txt**
 
 ```text
-Django>=3.2.4,<3.3
-djangorestframework>=3.12.4,<3.13
+flake8>=3.9.2,<3.10
 ```
+
+**Update Dockerfile**
+
+```dockerfile
+FROM python:3.9-alpine3.13
+LABEL maintainer="bidursapkota.com.np"
+
+ENV PYTHONUNBUFFERED 1
+
+COPY ./requirements.txt /tmp/requirements.txt
+COPY ./requirements.dev.txt /tmp/requirements.dev.txt
+COPY ./app /app
+WORKDIR /app
+EXPOSE 8000
+
+ARG DEV=false
+RUN python -m venv /py && \
+    /py/bin/pip install --upgrade pip && \
+    /py/bin/pip install -r /tmp/requirements.txt && \
+    if [ $DEV = "true" ]; \
+        then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
+    fi && \
+    rm -rf /tmp && \
+    adduser \
+        --disabled-password \
+        --no-create-home \
+        django-user
+
+ENV PATH="/py/bin:$PATH"
+
+USER django-user
+```
+
+**Update docker-compose.yml**
+
+```yml
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        - DEV=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+```
+
+**Build Image**
+
+```bash
+docker compose build
+```
+
+**Create file app/.flake8**
+
+```flake8
+[flake8]
+exclude =
+  migrations,
+  __pycache__,
+  manage.py,
+  settings.py
+```
+
+```bash
+docker compose run --rm app sh -c "flake8"
+```
+
+**Create Django Project**
+
+```bash
+docker compose run --rm app sh -c "django-admin startproject app ."
+```
+
+**Run Django Project**
+
+```bash
+docker compose up
+```
+
+Visit `127.0.0.1:8000`
