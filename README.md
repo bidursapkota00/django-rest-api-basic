@@ -615,3 +615,94 @@ class TestViews(SimpleTestCase):
 - Indentation of test cases
 - Missing `test` prefix for method
 - Both `tests/` directory and `tests.py` exist (ImportError)
+
+---
+
+---
+
+---
+
+**Probable CI/CD**
+
+```yml
+name: Django CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # allows manual trigger
+
+jobs:
+  test-lint:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python manage.py test
+
+      - name: Run flake8
+        run: flake8
+
+  build-push:
+    name: Build & Push Docker
+    needs: test-lint
+    runs-on: ubuntu-latest
+    if: success() # only run if test-lint passes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker Image
+        run: docker build -t ${{ secrets.DOCKERHUB_USER }}/myapp:latest .
+
+      - name: Push Docker Image
+        run: docker push ${{ secrets.DOCKERHUB_USER }}/myapp:latest
+
+  deploy:
+    name: Deploy to Render via SSH
+    needs: build-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' # only manual trigger
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.RENDER_HOST }}
+          username: ${{ secrets.RENDER_USER }}
+          key: ${{ secrets.RENDER_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USER }}/myapp:latest
+            docker compose down
+            docker compose up -d
+```
+
+**Required GitHub Secrets**
+
+```text
+DOCKERHUB_USER
+DOCKERHUB_TOKEN
+RENDER_HOST         # IP / hostname of your Render instance
+RENDER_USER         # SSH username
+RENDER_SSH_KEY      # private SSH key for Render instance
+```
