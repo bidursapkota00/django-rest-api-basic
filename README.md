@@ -7,6 +7,7 @@
 ## Table of Contents
 
 1. [Introduction and Installation](#introduction-and-installation)
+2. [First GitHub Actions](#first-github-actions)
 
 ## Introduction and Installation
 
@@ -109,20 +110,6 @@ git --version
 Django>=3.2.4,<3.3
 djangorestframework>=3.12.4,<3.13
 ```
-
-**Docker Hub**
-
-- Go to `hub.docker.com`
-- Create account
-- Go to account settings
-- Select Security tab, then click New Access Token
-
-**GitHub**
-
-- Go to repo's settings
-- Select Secrets tab, then click New repository secret
-- Add secret: DOCKERHUB_USER. Set username of DockerHub
-- Add secret: DOCKERHUB_TOKEN. Set token generated in above step
 
 **Configure Docker**
 
@@ -346,3 +333,94 @@ docker compose up
 ```
 
 Visit `127.0.0.1:8000`
+
+---
+
+---
+
+---
+
+## First GitHub Actions
+
+**GitHub Actions**
+
+- Automation tool
+- Similar to Travis-CI, GitLab CI/CD, Jenkins
+- Run jobs when code changes
+- Automate tasks
+
+**Common uses**
+
+- Deployment
+- Code linting
+- Unit tests
+
+**How it works**
+
+- **Trigger:** Push to GitHub
+- **Job:** Run unit tests
+- **Result:** Success/fail
+
+**Pricing**
+
+- Charged per minutes
+- 2,000 free minutes
+- Various plans available
+
+**Docker Hub**
+
+- Needed to pull base images
+- Authenticate with Docker Hub, then 200 pulls per 6h is available
+- Go to `hub.docker.com`
+- Create account
+- Go to account settings
+- Select Security tab, then click New Access Token
+
+**On GitHub**
+
+- Go to repo's settings
+- Select Secrets tab, then click New repository secret
+- Add secret: DOCKERHUB_USER. Set username of DockerHub
+- Add secret: DOCKERHUB_TOKEN. Set token generated in above step
+
+**How we’ll configure GitHub Actions**
+
+- Create a config file at `.github/workflows/checks.yml`
+- Set trigger
+- Configure Docker Hub auth
+- Add steps for running testing and linting
+
+**How to authenticate with Docker Hub?**
+
+- Register account on [https://hub.docker.com/](https://hub.docker.com/)
+- Use `docker login` during our job
+- Add secrets to GitHub project
+- Secrets are encrypted
+- Decrypted when needed in actions
+
+**Create .github/workflows/checks.yml**
+
+```yml
+---
+name: Checks
+
+on: push
+
+jobs:
+  test-lint:
+    name: Test and Lint
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Test
+        run: docker compose run --rm app sh -c "python manage.py test"
+      - name: Lint
+        run: docker compose run --rm app sh -c "flake8"
+```
