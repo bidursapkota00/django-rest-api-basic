@@ -8,6 +8,7 @@
 
 1. [Introduction and Installation](#introduction-and-installation)
 2. [First GitHub Actions](#first-github-actions)
+3. [First Tests](#first-tests)
 
 ## Introduction and Installation
 
@@ -409,7 +410,7 @@ on: push
 jobs:
   test-lint:
     name: Test and Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Login to Docker Hub
@@ -424,3 +425,193 @@ jobs:
       - name: Lint
         run: docker compose run --rm app sh -c "flake8"
 ```
+
+---
+
+---
+
+---
+
+## First Tests
+
+**Django test framework**
+
+- Based on the `unittest` library
+- Django adds features:
+
+  - Test client - dummy web browser
+  - Simulate authentication
+  - Temporary database
+
+- Django REST Framework adds features:
+
+  - API test client
+
+**Where do you put tests?**
+
+- Placeholder `tests.py` added to each app
+- Or, create `tests/` subdirectory to split tests up
+- Keep in mind:
+  - Only use `tests.py` or `tests/` directory (not both)
+  - Test modules must start with `test_`
+  - Test directories must contain `__init__.py`
+
+**Test Database**
+
+- Test code that uses the DB
+- Specific database for tests
+- Runs test then Clears data (loops back to Runs test)
+- Happens for _every_ test (by default)
+
+---
+
+**Test classes**
+
+- **`SimpleTestCase`**
+
+  - No database integration
+  - Useful if no database is required for your test
+  - Save time executing tests
+
+- **`TestCase`**
+
+  - Database integration
+  - Useful for testing code that uses the database
+
+**Writing tests**
+
+- Import test class
+
+  - `SimpleTestCase` - No database
+  - `TestCase` - Database
+
+- Import objects to test
+- Define test class
+- Add test method
+- Setup inputs
+- Execute code to be tested
+- Check output
+
+**Example**
+
+**Create file app/app/calc.py**
+
+```py
+"""
+Calculator functions
+"""
+
+
+def add(x, y):
+    """Add x and y and return result."""
+    return x + y
+
+
+def subtract(x, y):
+    """Subtract x from y and return result."""
+    return y - x
+```
+
+**Create file app/app/tests.py**
+
+```py
+"""
+Sample tests
+"""
+from django.test import SimpleTestCase
+
+from app import calc
+
+
+class CalcTests(SimpleTestCase):
+    """Test the calc module."""
+
+    def test_add_numbers(self):
+        """Test adding numbers together."""
+        res = calc.add(5, 6)
+
+        self.assertEqual(res, 11)
+
+    def test_subtract_numbers(self):
+        """Test subtracting numbers."""
+        res = calc.subtract(10, 15)
+
+        self.assertEqual(res, 5)
+```
+
+**Run Tests**
+
+```bash
+docker compose run --rm app sh -c "python manage.py test"
+```
+
+---
+
+**What is Mocking?**
+
+- Override or change behaviour of dependencies
+- Avoid unintended side effects
+- Isolate code being tested
+
+---
+
+**Why use mocking?**
+
+- Avoid relying on external services
+
+  - Can't guarantee they will be available
+  - Makes tests unpredictable and inconsistent
+
+- Avoid unintended consequences
+
+  - Accidentally sending emails
+  - Overloading external services
+
+**How to mock code?**
+
+- **Use `unittest.mock**`
+  - `MagicMock` / `Mock` - Replace real objects
+  - `patch` - Overrides code for tests
+
+---
+
+**Testing APIs**
+
+- Make actual requests
+- Check result
+
+---
+
+**Django REST Framework APIClient**
+
+- Based on the Django’s `TestClient`
+- Make requests
+- Check result
+- Override authentication
+
+**Code Implementation Example**
+
+```python
+from django.test import SimpleTestCase
+from rest_framework.test import APIClient
+
+class TestViews(SimpleTestCase):
+
+    def test_get_greetings(self):
+        """ Test getting greetings. """
+        client = APIClient()
+        res = client.get('/greetings/')
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            res.data,
+            ["Hello!"],
+        )
+```
+
+**Possible reasons for tests not running**
+
+- Missing `__init__.py` in `tests/` dir
+- Indentation of test cases
+- Missing `test` prefix for method
+- Both `tests/` directory and `tests.py` exist (ImportError)
