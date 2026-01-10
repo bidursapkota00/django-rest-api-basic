@@ -172,7 +172,8 @@ venv/
 
 **Build Image**
 
-Make sure to be in project root folder.
+- Make sure to be in project root folder.
+- <font color='red'>Since: COPY ./app /app.<br>Create empty app folder</font>
 
 ```bash
 docker build .
